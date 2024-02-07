@@ -1,9 +1,11 @@
 openapi: '3.0.0'
 servers:
-  - url: /v0.3
+  - url: /v0.2
+    description: Current Endpoint
+  - url: /v0.1
 info:
   title: IonQ Cloud Platform API
-  version: 'v0.3'
+  version: 'v0.2'
   description: |
     # Introduction
     Welcome to the IonQ platform! You can use our API and the `qcloud` command-line interface to submit and retrieve jobs on our quantum hardware as well as our high-performance simulator.
@@ -13,28 +15,35 @@ info:
 
     If you prefer to not think about HTTP, use our [OpenAPI](https://www.openapis.org/) spec to generate bindings for your language of choice. Pre-generated bindings for Python and JavaScript are coming soon.
 
-    ## Migrating to v0.3
+    ## Non-breaking changes
 
-    If needed, you can [find the v0.2 api docs here](./v0.2)
-
-    ### Breaking changes
-    * Body has been renamed to input, and is always a JSON payload. The format field in input replaces lang as a means of controlling what kind of input is being run.
-    * Results are no longer served alongside the job body when fetching jobs, the new Job result endpoint, or the output field may be used.
-
-    ### New features
-    * JobOutputs has been added to allow for asynchronous user-defined job results upload.
-    * Error mitigation is now controllable via API. Debiasing can improve performance via randomized qubit mappings and intelligent post-processing of noise.
+    * Histogram example expanded to include scientific notation for a JSON numeric value.
 
     ## Migrating to v0.2
 
     ### Breaking changes
+
     * [Calibrations](#tag/calibrations) endpoints has been deprecated in favor of [Characterizations](#tag/characterizations).
 
     ### New features
-    * Ability to specifify target hardware generation on Job creation. e.g. `qpu.harmony` for targeting our 11-qubit system.
 
-    ## Non-breaking changes
-    * Histogram example expanded to include scientific notation for a JSON numeric value.
+    * Ability to specifify target hardware generation on Job creation. e.g. `qpu.harmony` for targeting our 11-qubit system.
+    * Introduces [Characterizations](#tag/characterization) endpoints. Enables fetching current and historic characterizations for specific targets.
+    * [Backends](#tag/backends) availability and other stats can now be fetched.
+
+    ## Migrating to v0.1
+
+    ### Breaking changes
+
+    Prerelease version `v0.1` has one major breaking change from `v0`:
+
+    * Canceling jobs is now done via a PUT. This allows us to more naturally support job deletion.
+
+    ### New features
+
+    * [Completely deleting](#operation/deleteJob) one or more jobs is now possible
+    * Multiple jobs may be [canceled simultaneously](#operation/cancelManyJobs)
+    * A list of jobs may be fetched simultaneously
 
     ## API status
 
@@ -74,13 +83,11 @@ tags:
 
       In the compilation and optimization process, classical operations *may* be executed classically&mdash;that is to say, not on the quantum computer&mdash;when it is logically equivalent to do so. If you wish to run purely classical operations on any of our quantum computers, please bypass our compiler and submit directly to our <a href="#section/Native-Specification">native gate interface</a>.
 
-      # Job Inputs
+      ## JSON Specification
 
-      ## ionq.circuit.v0 Specification
+      <SchemaDefinition schemaRef="#/components/schemas/JSONSpecification" />
 
-      <SchemaDefinition schemaRef="#/components/schemas/CircuitSpecification" />
-
-      ## Sample IonQ Circuits
+      ## Sample JSON Circuits
 
       ### Bell State
 
@@ -88,9 +95,6 @@ tags:
       Half of the time the second qubit will be measured as |0⟩; the other half, it will be measured as |1⟩.
 
           {
-            "format": "ionq.circuit.v0",
-            "gateset": "qis",
-            // The fields above are optional, as they are the default.
             "qubits": 2,
             "circuit": [
               {
@@ -171,16 +175,19 @@ tags:
       | `ti`   | Conjugate transpose of T gate                                                         |
       | `v`    | Square root of not gate                                                               |
       | `vi`   | Conjugate transpose of square-root-of-not gate                                        |
+      | `xx`   | Ising XX gate: e^(-iθ X⊗X /2)                                                         |
+      | `yy`   | Ising YY gate: e^(-iθ Y⊗Y /2)                                                         |
+      | `zz`   | Ising ZZ gate: e^(-iθ Z⊗Z /2)                                                         |
       | `swap` | [Swaps](https://en.wikipedia.org/wiki/Quantum_logic_gate#Swap_(SWAP)_gate) two qubits |
 
-      In addition, all gates except `swap` support a list of up to seven control qubits. This can often
+      In addition, many of the gates listed support a list of up to seven control qubits. This can often
       be used to simplify the circuit's description. In general, circuits expressed in fewer QIS gates
       will be further optimized for runtime, so using multicontrolled variants of gates is recommended.
 
       ## Native Specification
 
-      Access to native gates is available by default by setting the `gateset` parameter in the job input.
-      The `ms` gate takes arguments `phases` and `targets`, both of which must contain two elements. The `ms` gate may also optionally be parameterized with an `angle`, specifying the degree of arbitrary entanglement from 0 (identity) to 0.25 (fully entangled).
+      Access to native gates is available by default by setting the `gateset` parameter in the job body.
+      The `ms` gate takes arguments `phases` and `targets`, both of which must contain two elements.
       The `gpi` and `gpi2` gates take arguments phase and target.
 
 
@@ -192,13 +199,11 @@ tags:
       | `gpi2` | [GPI2 gate](https://ionq.com/docs/getting-started-with-native-gates#single-qubit-gates)                                                         |
 
       For a more in-depth discussion of our native operations, see our [Native Gates Guide](https://ionq.com/docs/getting-started-with-native-gates) for details and recommendations.
-
-      ## Other Formats (experimental)
-
-      <SchemaDefinition schemaRef="#/components/schemas/OpenQASMSourceBody" />
-      <SchemaDefinition schemaRef="#/components/schemas/QASMSourceBody" />
-      <SchemaDefinition schemaRef="#/components/schemas/QuipperSourceBody" />
-
+  - name: calibrations
+    x-displayName: Calibrations
+    description: |
+      A **calibration** is a snapshot of the IonQ platform's performance at a moment in time.
+      While our computers are continuously calibrated moment to moment, we periodically take measurements of gate fidelities and other statistics.
   - name: characterizations
     x-displayName: Characterizations
     description: |
@@ -216,7 +221,7 @@ tags:
             "metadata": {
                 "custom_key": "a string, maximum 400 chars"
             },
-            "input": { "format": "ionq.circuit.v0", "qubits": 1, "circuit": [ { "gate": "h", "target": 0 } ] }
+            "body": { "qubits": 1, "circuit": [ { "gate": "h", "target": 0 } ] }
           }
   - name: backends
     x-displayName: Backends
@@ -236,7 +241,7 @@ tags:
       Add it to your request querystring to fetch the next batch.
 
       ```bash
-      curl -H "Authorization: apiKey ..." "https://api.ionq.co/v0.3/jobs?limit=100&next=dce01d5c-987e-48e8-b2b7-41c24d69d711"
+      curl -H "Authorization: apiKey ..." "https://api.ionq.co/v0.2/jobs?limit=100&next=dce01d5c-987e-48e8-b2b7-41c24d69d711"
 
       {
         "jobs": [ ... ],
@@ -315,6 +320,7 @@ x-tagGroups:
       - quantum_programs
   - name: Characterization Data
     tags:
+      - calibrations
       - characterizations
   - name: Backends
     tags:
@@ -352,11 +358,11 @@ paths:
         - lang: curl
           source: |
             # Get all jobs:
-            curl "https://api.ionq.co/v0.3/jobs" \
+            curl "https://api.ionq.co/v0.2/jobs" \
               -H "Authorization: apiKey your-api-key"
 
             # Filter jobs by id:
-            curl "https://api.ionq.co/v0.3/jobs?id=617a1f8b-59d4-435d-aa33-695433d7155e&id=2ccf2773-4c28-468e-a290-2f8554808a25" \
+            curl "https://api.ionq.co/v0.2/jobs?id=617a1f8b-59d4-435d-aa33-695433d7155e&id=2ccf2773-4c28-468e-a290-2f8554808a25" \
               -H "Authorization: apiKey your-api-key"
     post:
       operationId: createJob
@@ -364,7 +370,6 @@ paths:
       description: To submit a program to be simulated or executed on our quantum hardware, `POST` it to the `jobs` endpoint.
       tags:
         - jobs
-        - job-output
       requestBody:
         $ref: '#/components/requestBodies/CreateJob'
       responses:
@@ -373,10 +378,10 @@ paths:
       x-codeSamples:
         - lang: curl
           source: |
-            curl -X POST "https://api.ionq.co/v0.3/jobs" \
+            curl -X POST "https://api.ionq.co/v0.2/jobs" \
               -H "Authorization: apiKey your-api-key" \
               -H "Content-Type: application/json" \
-              -d '{ "input": { "format": "ionq.circuit.v0", "qubits": 1, "circuit": [ {"gate": "h", "target": 0} ] } }'
+              -d '{ "body": { "qubits": 1, "circuit": [ {"gate": "h", "target": 0} ] } }'
     delete:
       operationId: deleteManyjobs
       summary: Delete Many Jobs
@@ -391,7 +396,7 @@ paths:
       x-codeSamples:
         - lang: curl
           source: |
-            curl -X DELETE "https://api.ionq.co/v0.3/jobs" \
+            curl -X DELETE "https://api.ionq.co/v0.2/jobs" \
               -H "Authorization: apiKey your-api-key"
               -d '{ \
                     "ids": [ \
@@ -417,7 +422,7 @@ paths:
       x-codeSamples:
         - lang: curl
           source: |
-            curl "https://api.ionq.co/v0.3/jobs/617a1f8b-59d4-435d-aa33-695433d7155e" \
+            curl "https://api.ionq.co/v0.2/jobs/617a1f8b-59d4-435d-aa33-695433d7155e" \
               -H "Authorization: apiKey your-api-key"
     delete:
       operationId: deleteJob
@@ -433,26 +438,7 @@ paths:
       x-codeSamples:
         - lang: curl
           source: |
-            curl -X DELETE "https://api.ionq.co/v0.3/jobs/617a1f8b-59d4-435d-aa33-695433d7155e" \
-              -H "Authorization: apiKey your-api-key"
-  /jobs/{UUID}/results:
-    get:
-      operationId: getJobResults
-      summary: Get a Specific Job's Output
-      description: This endpoint retrieves a specific job's results by its UUID.
-      tags:
-        - jobs
-        - job-output
-      parameters:
-        - $ref: '#/components/parameters/job-uuid'
-        - $ref: '#/components/parameters/sharpen'
-      responses:
-        '200':
-          $ref: '#/components/responses/GetJobResults'
-      x-codeSamples:
-        - lang: curl
-          source: |
-            curl "https://api.ionq.co/v0.3/jobs/617a1f8b-59d4-435d-aa33-695433d7155e/results" \
+            curl -X DELETE "https://api.ionq.co/v0.2/jobs/617a1f8b-59d4-435d-aa33-695433d7155e" \
               -H "Authorization: apiKey your-api-key"
   /jobs/{UUID}/status/cancel:
     put:
@@ -469,7 +455,7 @@ paths:
       x-codeSamples:
         - lang: curl
           source: |
-            curl -X PUT "https://api.ionq.co/v0.3/jobs/617a1f8b-59d4-435d-aa33-695433d7155e/status/cancel" \
+            curl -X PUT "https://api.ionq.co/v0.2/jobs/617a1f8b-59d4-435d-aa33-695433d7155e/status/cancel" \
               -H "Authorization: apiKey your-api-key"
   /jobs/status/cancel:
     put:
@@ -486,7 +472,7 @@ paths:
       x-codeSamples:
         - lang: curl
           source: |
-            curl -X PUT "https://api.ionq.co/v0.3/jobs/status/cancel" \
+            curl -X PUT "https://api.ionq.co/v0.2/jobs/status/cancel" \
               -H "Authorization: apiKey your-api-key"
               -d '{ \
                     "ids": [ \
@@ -495,6 +481,61 @@ paths:
                         "f92df2b6-d212-4f4a-b9ea-024b58c5c3e8" \
                     ] \
                 }'
+  /calibrations:
+    get:
+      deprecated: true
+      operationId: getCalibrations
+      summary: Get All Calibrations
+      description: |
+        This endpoint retrieves an array of all available calibrations, with pagination.
+        This endpoint has been deprecated and will be removed in future versions. Use [Get All Backend Characterizations](#operation/getCharacterizationsForBackend) instead.
+      tags:
+        - calibrations
+      parameters:
+        - name: start
+          in: query
+          description: Calibrations starting at this time (e.g., `start=1585713600000`)
+          schema:
+            type: integer
+        - name: end
+          in: query
+          description: Calibrations before this time (e.g., `end=1585713600000`)
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          description: How many objects to return.
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 10
+      responses:
+        '200':
+          $ref: '#/components/responses/ListCalibrations'
+      x-codeSamples:
+        - lang: curl
+          source: |
+            curl "https://api.ionq.co/v0.1/calibrations" \
+              -H "Authorization: apiKey your-api-key"
+  /calibrations/current:
+    get:
+      deprecated: true
+      operationId: getCurrentCalibration
+      summary: Get the Most Recent Calibration
+      description: |
+        This endpoint retrieves the most recent calibration data available.
+        This endpoint has been deprecated and will be removed in future versions. Use [Get the Most Recent Backend Characterization](#operation/getCharacterizationsCurrentForBackend) instead.
+      tags:
+        - calibrations
+      responses:
+        '200':
+          $ref: '#/components/responses/GetCalibration'
+      x-codeSamples:
+        - lang: curl
+          source: |
+            curl "https://api.ionq.co/v0.1/calibrations/current" \
+              -H "Authorization: apiKey your-api-key"
   /characterizations/backends/{backend}:
     get:
       operationId: getCharacterizationsForBackend
@@ -529,7 +570,7 @@ paths:
       x-codeSamples:
         - lang: curl
           source: |
-            curl "https://api.ionq.co/v0.3/characterizations/backends/qpu.s11" \
+            curl "https://api.ionq.co/v0.2/characterizations/backends/qpu.s11" \
               -H "Authorization: apiKey your-api-key"
   /characterizations/backends/{backend}/current:
     get:
@@ -546,7 +587,7 @@ paths:
       x-codeSamples:
         - lang: curl
           source: |
-            curl "https://api.ionq.co/v0.3/characterizations/backends/qpu.s11/current" \
+            curl "https://api.ionq.co/v0.2/characterizations/backends/qpu.s11/current" \
               -H "Authorization: apiKey your-api-key"
   /characterizations/{UUID}:
     get:
@@ -563,7 +604,7 @@ paths:
       x-codeSamples:
         - lang: curl
           source: |
-            curl "https://api.ionq.co/v0.3/characterizations/aa54e783-0a9b-4f73-ad2f-63983b6aa4a8" \
+            curl "https://api.ionq.co/v0.2/characterizations/aa54e783-0a9b-4f73-ad2f-63983b6aa4a8" \
               -H "Authorization: apiKey your-api-key"
   /backends:
     get:
@@ -573,30 +614,24 @@ paths:
       security: []
       tags:
         - backends
-      parameters:
-        - name: status
-          in: query
-          description: Provides a more detailed [VerboseStatus](#/components/schemas/VerboseStatus).
-          schema:
-            type: string
-            enum: [verbose]
       responses:
         '200':
           $ref: '#/components/responses/GetBackends'
       x-codeSamples:
         - lang: curl
           source: |
-            curl "https://api.ionq.co/v0.3/backends"
+            curl "https://api.ionq.co/v0.2/backends"
 
 # Schema definitions
 components:
   examples:
     Metadata:
       value:
+        lang: json
         metadata:
           foo: 1
           bar: 2
-        input: '{ "format": "ionq.circuit.v0", "qubits": 1, "circuit": [ { "gate": "h", "target": 0 } ] }'
+        body: '{ "qubits": 1, "circuit": [ { "gate": "h", "target": 0 } ] }'
   schemas:
     job-uuid:
       type: string
@@ -626,7 +661,7 @@ components:
         - qpu.aria-1
         - simulator
     noise:
-      description: When the target is "simulator", this field specifies optional noise parameters for simulation. (If these noise parameters are not provided, simulations will run on an ideal quantum computer model, without noise.) This field does not apply to `qpu.*` targets. When a noise model is applied, the simulator qubit limit is inherited from the modeled QPU's qubit limit. (This limit does not apply to the ideal quantum computer simulator. Please refer to the current qubit limit of the ideal quantum computer simulator.)
+      description: When the target is "simulator", this field specifies optional noise parameters for simulation. (If these noise parameters are not provided, simulations will run on an ideal quantum computer model, without noise.) This field does not apply to `qpu.*` targets.
       type: object
       properties:
         model:
@@ -639,7 +674,31 @@ components:
         seed:
           type: integer
           description: This is the seed value for the pseudo-random sampling and noise generation when a system noise model is specified. The seed needs to be a positive integer between 1 and 2^31. Providing a seed is optional and allows for repeatable (i.e. non-random) outcomes. If a seed is not specified, one is chosen at random and will be provided in the output for the simulation. This field does not apply to simulations using the "ideal" noise model. This field also does not apply to `qpu.*` targets.
-          example: 100
+          example:
+            100
+    data:
+      description: Job execution data.
+      type: object
+      properties:
+        histogram:
+          type: object
+          description: A histogram of job event data, with probabilities possibly encoded in exponential form.
+            While these numbers should roughly sum to 1, they may not exactly due to loss of precision.
+          example:
+            '0': 0.50
+            '1': 0.50
+            '2': 1.000e-07
+          additionalProperties: true
+    lang:
+      type: string
+      description: 'The language this job is written in:
+      json`, `qasm`, `openqasm`, `quipper`, etc. Defaults to json.'
+      example: json
+      enum:
+        - json
+        - openqasm
+        - qasm
+        - quipper
     status:
       type: string
       example: completed
@@ -661,9 +720,6 @@ components:
       minimum: 1
       maximum: 25
       description: How many objects to return.
-    sharpen:
-      type: boolean
-      description: Get sharpened results from debiasing. Off by default. Will generally return more accurate results if your expected output distribution has peaks.
     pagination-page:
       type: integer
       default: 1
@@ -682,10 +738,17 @@ components:
       required:
         - id
         - status
+        - type
         - request
       properties:
         id:
           $ref: '#/components/schemas/job-uuid'
+        type:
+          type: string
+          example: 'circuit'
+          description: The job type
+          enum:
+            - circuit
         name:
           $ref: '#/components/schemas/name'
         status:
@@ -694,14 +757,12 @@ components:
           $ref: '#/components/schemas/target'
         noise:
           $ref: '#/components/schemas/noise'
+        data:
+          $ref: '#/components/schemas/data'
         metadata:
           $ref: '#/components/schemas/metadata'
         shots:
           $ref: '#/components/schemas/shots'
-        output:
-          $ref: '#/components/schemas/JobOutput'
-        error_mitigation:
-          $ref: '#/components/schemas/ErrorMitigation'
         gate_counts:
           type: object
           description: The number of gates used with this job.
@@ -743,15 +804,6 @@ components:
           type: integer
           description: The predicted execution time of this job.
           example: 13
-        children:
-          type: array
-          description: A list of child jobs that were created from this job.
-          items:
-            $ref: '#/components/schemas/job-uuid'
-        results_url:
-          type: string
-          example: /v0.3/jobs/617a1f8b-59d4-435d-aa33-695433d7155e/results
-          description: Relative API path to retreive the results for this job. See <a href="#tag/jobs/operation/getJobResults">Get a Specific Job's Output</a> for more details.
         failure:
           type: object
           description: Error metadata, if the job failed.
@@ -779,6 +831,73 @@ components:
       description: A list of jobs.
       items:
         $ref: '#/components/schemas/Job'
+    Calibration:
+      type: object
+      description: Quantum hardware calibration data.
+      properties:
+        id:
+          type: string
+          description: UUID of the calibration.
+          format: uuid
+        date:
+          type: integer
+          description: Time of the measurement, from Unix epoch in seconds.
+        target:
+          type: string
+          description: The target calibrated hardware.
+          enum:
+            - ionq.qpu
+        qubits:
+          type: integer
+          description: The number of qubits available.
+          minimum: 0
+        connectivity:
+          type: array
+          description: An array of valid, unordered tuples of possible qubits for executing two-qubit gates (e.g., `[[0, 1], [0, 2], [1, 2]]`)
+          example:
+            - [0, 1]
+            - [0, 2]
+            - ...
+            - [10, 9]
+          items:
+            type: array
+            items:
+              type: integer
+        fidelity:
+          type: object
+          description: |
+            Fidelity for single-qubit (`1q`) and two-qubit (`2q`) gates, and State Preparation and Measurement (`spam`) operations.
+            Currently provides only mean fidelity; additional statistical data will be added in the future.
+          required:
+            - spam
+          properties:
+            spam:
+              type: object
+              description: SPAM error correction information.
+              required:
+                - mean
+              properties:
+                mean:
+                  type: integer
+                  description: Mean SPAM value.
+                  minimum: 0
+                stderr:
+                  type: integer
+                  description: SPAM error.
+                  minimum: 0
+        timing:
+          type: object
+          description: 'Time, in seconds, of various system properties: `t1` time, `t2` time, `1q` gate time, `2q` gate time, `readout` time, and qubit `reset` time.'
+          required:
+            - readout
+            - reset
+          properties:
+            readout:
+              type: integer
+              description: Readout time.
+            reset:
+              type: integer
+              description: qubit reset time.
     Characterization:
       type: object
       description: Quantum hardware characterization data.
@@ -854,16 +973,18 @@ components:
         - status
         - qubits
         - average_queue_time
-        - last_updated
+        - updated
       properties:
         backend:
           type: string
-          example: qpu.aria-1
+          example: qpu.s11
           description: Specifies target hardware and generation where applies.
         status:
-          oneOf:
-            - $ref: '#/components/schemas/BasicStatus'
-            - $ref: '#/components/schemas/VerboseStatus'
+          type: string
+          description: Current availability.
+          enum:
+            - available
+            - unavailable
         average_queue_time:
           type: number
           format: unix-timestamp
@@ -873,53 +994,10 @@ components:
           type: integer
           example: 1490932820
           description: Last time the backend status was updated.
-        degraded:
-          type: boolean
-          example: false
-          description: >
-
-            The system is in a degraded state and may be processing jobs slower than usual.
-
-            _Only applies to systems in `running`, `reserved`, or `calibrating` status._
         characterization_url:
           type: string
           example: /characterizations/617a1f8b-59d4-435d-aa33-695433d7155e
           description: Current characterization for this backend
-    BasicStatus:
-      type: string
-      description: Current availability.
-      enum:
-        - available
-        - unavailable
-    VerboseStatus:
-      type: string
-      description: >
-        What the system is currently doing. Note that regardless of system status, you can always submit jobs for execution.
-
-        * `running`
-
-          The system is running jobs.
-
-        * `reserved`
-
-          The system is reserved by a single customer.
-          It will resume regular execution after the reservation is complete.
-
-        * `calibrating`
-
-          The system is currently calibrating and will resume regular execution when calibration is complete.
-
-        * `offline`
-
-          The system is currently offline and not processing jobs.
-
-          Please refer to [https://status.ionq.co/](https://status.ionq.co/) for more information.
-
-      enum:
-        - running
-        - reserved
-        - calibrating
-        - offline
     RequestValidation:
       type: object
       description: Request validation failure details.
@@ -968,7 +1046,7 @@ components:
           description: A helpful error message.
         validation:
           $ref: '#/components/schemas/RequestValidation'
-    NativeCircuitOperation:
+    NativeSpecCircuitOperations:
       type: object
       properties:
         gate:
@@ -985,15 +1063,12 @@ components:
           description: Phases of gate (measured in Turns; i.e., units of 2π). Used for gates that target more than one ion.
           items:
             type: number
-        angle:
-          type: number
-          description: Angle of gate (measured in Turns; i.e., units of 2π), from 0 (identity) to 0.25 (fully entangled). Optional, used for `ms` gates only.
         targets:
           type: array
           description: Qubit index(es) (starting from zero) to apply gate to.
           items:
             type: number
-    QISCircuitOperation:
+    JSONSpecCircuitOperations:
       type: object
       properties:
         gate:
@@ -1003,7 +1078,7 @@ components:
           type: number
           description: |
             Qubit index (starting from zero) to apply gate to.
-            **Note**: If a gate uses multiple target qubits (e.g. CNOT or SWAP), use the `targets` array instead.
+            **Note**: If a gate uses multiple target qubits (e.g. XX or SWAP), use the `targets` array instead.
         targets:
           type: array
           description: Use in place of `target`, if multiple gate uses multiple targets qubits.
@@ -1022,160 +1097,86 @@ components:
         rotation:
           type: number
           description: Rotation angle in radians, for gates that take it, like RX
-    JobInput:
+    JSONSpecification:
       type: object
-      description: Input for creating a job via a [Quantum Program](#section/Job-Inputs/ionq.circuit.v0-Specification)
+      description: Quantum circuits for simulation or execution may be submitted as plain JSON using a [simple schema](https://static.ionq.co/schemas/circuit-v0.json).
       required:
-        - format
+        - qubits
+        - circuit
       properties:
-        format:
-          type: string
-          enum:
-            - ionq.circuit.v0
-            - openqasm
-            - qasm
-            - quipper
-      discriminator:
-        propertyName: format
-        mapping:
-          ionq.circuit.v0: '#/components/schemas/CircuitSpecification'
-          openqasm: '#/components/schemas/OpenQASMSourceBody'
-          qasm: '#/components/schemas/QASMSourceBody'
-          quipper: '#/components/schemas/QuipperSourceBody'
-      oneOf:
-        - $ref: '#/components/schemas/CircuitSpecification'
-        - $ref: '#/components/schemas/OpenQASMSourceBody'
-        - $ref: '#/components/schemas/QASMSourceBody'
-        - $ref: '#/components/schemas/QuipperSourceBody'
-    JobOutput:
-      type: object
-      description: Job Output configuration
-      properties:
-        uri:
-          type: string
-          description: URI to upload Job output via PUT method
-      example:
-        uri: https://jobs.ionq.com/outputs/aa54e783-0a9b-4f73-ad2f-63983b6aa4a8
-    ErrorMitigation:
-      type: object
-      description: Which error mitigation methods to apply to this circuit. This may affect how the job is compiled, and what configuration can be used to fetch results.
-      properties:
-        debias:
-          type: boolean
-          description: Set to true to turn on [debiasing](https://ionq.com/resources/debiasing-and-sharpening), which can improve circuit performance by removing qubit-specific noise. _Debiasing is on by default for Aria-class systems._
-    CircuitSpecification:
-      type: object
-      description: Quantum circuits for simulation or execution may be submitted as JSON using a [simple schema](#section/Job-Inputs/ionq.circuit.v0-Specification).
-      required:
-        - format
-      properties:
-        format:
-          type: string
-          enum:
-            - ionq.circuit.v0
         gateset:
           type: string
-          enum:
-            - qis
-            - native
+          description: Gateset to use, defaults to `qis`. Available options `qis` and `native`.
+          example: qis
         qubits:
           type: integer
           description: Number of qubits your circuit requires.
           example: 2
-        circuit: 
-          discriminator:
-            propertyName: gateset
-            mapping:
-              qis: '#/components/schemas/QISCircuit'
-              native: '#/components/schemas/NativeCircuit'
-          oneOf:
-            - $ref: '#/components/schemas/QISCircuitSpecification'
-            - $ref: '#/components/schemas/NativeCircuitSpecification'
-        circuits:
+        circuit:
           type: array
-          description: List of circuits to run.
+          description: Array of circuit operations.
+          example:
+            - gate: 'h'
+              target: 0
+            - gate: 'cnot'
+              control: 0
+              target: 1
+            - gate: 'gpi2'
+              phase: 0.1
+              target: 1
+            - gate: 'ms'
+              phases: [0.1, 0.2]
+              targets: [1, 2]
           items:
-            type: object
-            properties:
-              qubits:
-                type: integer
-                description: Number of qubits your circuit requires.
-              registers:
-                type: object
-                description: |
-                  Registers to use in your circuit. Each register is a list of qubit indices (starting from zero).
-              circuit:
-                oneOf:
-                  - $ref: '#/components/schemas/QISCircuitSpecification'
-                  - $ref: '#/components/schemas/NativeCircuitSpecification'
-    QISCircuitSpecification:
-      type: array
-      description: Array of QIS circuit operations.
-      example:
-        - gate: 'h'
-          target: 0
-        - gate: 'cnot'
-          control: 0
-          target: 1
-      items:
-        $ref: '#/components/schemas/QISCircuitOperation'
-    NativeCircuitSpecification:
-      type: array
-      description: Array of native circuit operations.
-      example:
-        - gate: 'gpi2'
-          phase: 0.1
-          target: 1
-        - gate: 'ms'
-          phases: [0.1, 0.2]
-          targets: [1, 2]
-      items:
-          $ref: '#/components/schemas/NativeCircuitOperation'
-    OpenQASMSourceBody:
+            oneOf:
+            - $ref: '#/components/schemas/JSONSpecCircuitOperations'
+            - $ref: '#/components/schemas/NativeSpecCircuitOperations'
+    JSONSpecificationBody:
       type: object
+      description: Request body for creating JSON based circuits.
       required:
-        - format
-      description: Request body for creating circuits from OpenQASM.
+        - lang
+        - body
+      discriminator:
+        propertyName: lang
       properties:
-        format:
-          type: string
-          enum:
-            - openqasm
-        data:
-          type: string
-          description: String source for openqasm.
-    QASMSourceBody:
+        name:
+          $ref: '#/components/schemas/name'
+        metadata:
+          $ref: '#/components/schemas/metadata'
+        shots:
+          $ref: '#/components/schemas/shots'
+        target:
+          $ref: '#/components/schemas/target'
+        noise:
+          $ref: '#/components/schemas/noise'
+        lang:
+          $ref: '#/components/schemas/lang'
+        body:
+          $ref: '#/components/schemas/JSONSpecification'
+    SourceBody:
       type: object
+      description: Request body for creating circuits from language specific source code.
       required:
-        - format
-      description: Request body for creating circuits from QASM.
+        - lang
+        - body
+      discriminator:
+        propertyName: lang
       properties:
-        format:
+        name:
+          $ref: '#/components/schemas/name'
+        metadata:
+          $ref: '#/components/schemas/metadata'
+        shots:
+          $ref: '#/components/schemas/shots'
+        target:
+          $ref: '#/components/schemas/target'
+        lang:
+          $ref: '#/components/schemas/lang'
+        body:
           type: string
-          enum:
-            - qasm
-        data:
-          type: string
-          description: String source for qasm.
-    QuipperSourceBody:
-      type: object
-      required:
-        - format
-      description: Request body for creating circuits from Quipper.
-      properties:
-        format:
-          type: string
-          enum:
-            - quipper
-        data:
-          type: string
-          description: String source for quipper.
+          description: String source for a language such as qasm, openqasm, or quipper.
   parameters:
-    sharpen:
-      name: sharpen
-      in: query
-      schema:
-        $ref: '#/components/schemas/sharpen'
     pagination-limit:
       name: limit
       in: query
@@ -1275,25 +1276,17 @@ components:
       content:
         application/json:
           schema:
-            type: object
-            description: A job to be created
-            properties:
-              name:
-                $ref: '#/components/schemas/name'
-              metadata:
-                $ref: '#/components/schemas/metadata'
-              shots:
-                $ref: '#/components/schemas/shots'
-              target:
-                $ref: '#/components/schemas/target'
-              noise:
-                $ref: '#/components/schemas/noise'
-              input:
-                $ref: '#/components/schemas/JobInput'
-              output:
-                $ref: '#/components/schemas/JobOutput'
-              error_mitigation:
-                $ref: '#/components/schemas/ErrorMitigation'
+            description: Request body for creating a quantum job.
+            oneOf:
+              - $ref: '#/components/schemas/JSONSpecificationBody'
+              - $ref: '#/components/schemas/SourceBody'
+            discriminator:
+              propertyName: lang
+              mapping:
+                json: '#/components/schemas/JSONSpecificationBody'
+                openqasm: '#/components/schemas/SourceBody'
+                qasm: '#/components/schemas/SourceBody'
+                quipper: '#/components/schemas/SourceBody'
     CancelManyJobs:
       content:
         application/json:
@@ -1349,13 +1342,6 @@ components:
             statusCode: 404
             error: 'Not Found Error'
             message: 'Resource not found. See https://docs.ionq.com/ for details, or email support@ionq.co for help.'
-    GetJobResults:
-      description: Successfully retrieved results for a job
-      content:
-        application/json:
-          schema:
-            type: object
-          example: { '0': 1 }
     GetJob:
       description: Successfully retrieved a job
       content:
@@ -1471,6 +1457,30 @@ components:
                 description: Status of a job (always `deleted`).
                 enum:
                   - deleted
+    GetCalibration:
+      description: Successfully retrieved current calibration
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Calibration'
+    ListCalibrations:
+      description: Successfully retrieved calibrations.
+      content:
+        application/json:
+          schema:
+            type: object
+            description: Response body from requesting calibration data.
+            required:
+              - calibrations
+            properties:
+              calibrations:
+                type: array
+                description: A page of calibration measurements.
+                items:
+                  $ref: '#/components/schemas/Calibration'
+              pages:
+                type: integer
+                description: The number of remaining pages of calibration measurements.
     GetCharacterization:
       description: Successfully retrieved current characterization
       content:
@@ -1501,4 +1511,15 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Backends'
-  
+  securitySchemes:
+    'API Key':
+      in: header
+      name: Authorization
+      type: apiKey
+      description: |
+        We provide API keys to govern access&mdash;we'll provision your account with one key, and more can be provided upon request.
+
+        Every key is fully privileged within the system, and should be kept private.
+
+        To authenticate, prefix your API Key with `apiKey ` and place it in the `Authorization` request header.
+        For example: `Authorization: apiKey your-api-key`
