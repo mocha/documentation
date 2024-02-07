@@ -5,6 +5,7 @@
     "dark": "/logo/dark.svg",
     "light": "/logo/light.svg"
   },
+  "openapi": ["/spec.yml"],
   "favicon": "/favicon.svg",
   "colors": {
     "primary": "#0D9373",
@@ -28,7 +29,7 @@
   "tabs": [
     {
       "name": "API Reference",
-      "url": "api-reference"
+      "url": "api"
     }
   ],
   "anchors": [
@@ -69,20 +70,42 @@
       ]
     },
     {
-      "group": "API Documentation",
+      "group": "Get Started",
       "pages": [
-        "api-reference/introduction"
+        "api/introduction",
+        "api/quickstart"
       ]
     },
     {
-      "group": "Endpoint Examples",
+      "group": "jobs",
       "pages": [
-        "api-reference/endpoint/get",
-        "api-reference/endpoint/create",
-        "api-reference/endpoint/delete"
+        "api/jobs/get-jobs",
+        "api/jobs/create-a-job",
+        "api/jobs/delete-many-jobs",
+        "api/jobs/get-a-specific-job",
+        "api/jobs/delete-a-job",
+        "api/jobs/get-a-specific-jobs-output",
+        "api/jobs/cancel-a-job",
+        "api/jobs/cancel-many-jobs"
+      ]
+    },
+    {
+      "group": "characterizations",
+      "pages": [
+        "api/characterizations/get-all-backend-characterizations",
+        "api/characterizations/get-the-most-recent-backend-characterization",
+        "api/characterizations/get-a-characterization"
+      ]
+    },
+    {
+      "group": "backends",
+      "pages": [
+        "api/backends/get-backends"
       ]
     }
   ],
+
+  
   "footerSocials": {
     "twitter": "https://twitter.com/mintlify",
     "github": "https://github.com/mintlify",
