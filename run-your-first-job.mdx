@@ -1,0 +1,143 @@
+---
+title: Running your first job
+description: '_IonQ’s quantum computers process jobs sent to them via our API, however, most users leverage an SDK to submit their jobs to simplify the process. This guide covers the basics of writing and then running your first quantum program using Qiskit, a commonly-used SDK within our community. For guides to other SDKs, look in our [GitHub example repo](https://github.com/ionq-samples/getting-started)._'
+---
+
+## What is Qiskit
+
+[Qiskit](https://github.com/Qiskit/qiskit) is an open source Python SDK for working with quantum computers at a variety 
+of levels—from the “metal” itself, to pulses, gates, circuits and higher-order application areas like quantum machine 
+learning and quantum chemistry. It has “Providers” that enable support for different vendors and the various “backends” 
+(read: quantum computers or simulators) that they offer. 
+
+IonQ maintains an [IonQ Provider for Qiskit]() that allows you to work with our trapped-ion systems and our high-performance 
+cloud simulator, which we’ll install and use here.
+
+## Before you get started
+You’ll need an account on the [IonQ Quantum Cloud](https://cloud.ionq.com), and you’ll need to create an API key. We 
+also have a guide about [setting up and managing your API keys]() if you need some help.
+
+You’ll also need Python 3.11 running locally on your machine. Run `python --version` from your command line if you need to check.
+
+---
+
+## Setting up Qiskit
+
+First, we’ll install Qiskit and the IonQ Provider from [PyPI](https://pypi.org/) using pip:
+
+```bash
+pip install qiskit qiskit-ionq
+```
+
+Note: We encourage doing this inside an environment management system like 
+[virtualenv](https://virtualenv.pypa.io/en/latest/) or [conda](https://docs.conda.io/en/latest/) so as to avoid 
+[this fate](https://xkcd.com/1987/), but do what makes the most sense for you.
+
+## Set up your environment
+
+By default, Qiskit will look in your local environment for a variable named IONQ_API_KEY, so if that is set, it will 
+find it automatically there. From your command line, run:
+
+```bash
+export IONQ_API_KEY="your_api_key_here"
+```
+
+_Note: If you’d prefer, you can also pass your key as an argument to the IonQProvider object directly._
+
+## Start a script
+
+For this exercise, we’ll create a Python file and run it as a script. If you’re comfortable and familiar with Python, 
+you can approach this any number of ways—our ionq-examples project includes a number of Jupyter notebooks and other 
+approaches to check out.
+
+Open your a file up in whatever IDE you prefer, and add the following:
+
+```python
+from qiskit_ionq import IonQProvider
+provider = IonQProvider()
+
+print(provider.backends())
+```
+
+It should print the results below—something like this:
+
+```bash
+[<IonQSimulatorBackend('ionq_simulator')>, <IonQQPUBackend('ionq_qpu')>]
+```
+
+If this works correctly then your Qiskit installation works, your API token is valid, and you have access to the IonQ 
+simulator! If you had access to a QPU, you’d see it in this list, as well.
+
+---
+
+## Submitting a Circuit
+
+Now that we have a working Qiskit environment, let’s try running a simple Bell state. Try running this script:
+
+```python
+from qiskit import QuantumCircuit
+from qiskit_ionq import IonQProvider
+
+provider = IonQProvider()
+simulator_backend = provider.get_backend("simulator")
+
+# Create a basic Bell State circuit:
+qc = QuantumCircuit(2, 2)
+qc.h(0)
+qc.cx(0, 1)
+qc.measure([0, 1], [0, 1])
+
+# Run the circuit on IonQ's platform:
+job = simulator_backend.run(qc, shots=10000) 
+
+# Print the counts
+print(job.get_counts())
+```
+
+When you run it, you should see something like:
+
+```bash
+{'00': 4984, '11': 5016}
+```
+
+The simulator is simulating the circuit we defined, running it 10,000 times, and counting each state that it evaluated 
+to. In this case, it evaluated to a “00” state 5,025 times, and in a “11” state 4,975 times.
+
+The simulator provides the “ideal” probabilities from the circuit, and the provider creates “counts” by randomly 
+sampling from these probabilities. The raw (“true”) probabilities are also accessible by calling a function, like so:
+
+```python
+print(job.get_probabilities())
+```
+
+Which should return something like:
+
+```python
+{'00': 0.5, '11': 0.5}
+```
+
+All of your jobs, regardless of backend or status, can be viewed on the [“My Jobs” tab](https://cloud.ionq.com/jobs) 
+on the Cloud Console, or retrieved [via API](/api-reference/jobs).
+
+---
+
+## Learning more
+
+Great work! You successfully ran your first quantum circuit—*so now what?*
+
+**For additional resources on using Qiskit,** we recommend their 
+[getting started page](https://qiskit.org/documentation/getting_started.html) and 
+[learning resources](https://qiskit.org/learn). For more detailed information on Qiskit, we recommend the 
+[Qiskit documentation](https://qiskit.org/documentation/).
+
+**For advanced features** on IonQ systems with Qiskit, our resource center includes guides on 
+[using native gates](https://ionq.com/docs/using-native-gates-with-qiskit) and 
+[error mitigation with debiasing and sharpening](https://ionq.com/resources/debiasing-and-sharpening).
+
+**For examples using different SDKs,** more complex circuits, and in other languages, check out our 
+[IonQ Samples library on GitHub](https://github.com/ionq-samples/getting-started).
+
+Finally (and maybe most importantly,) you can also 
+[**request access to IonQ Quantum Computers here.**](https://ionq.com/get-access?intent=direct-access)
+
+

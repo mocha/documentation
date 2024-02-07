@@ -1,11 +1,10 @@
 {
   "$schema": "https://mintlify.com/schema.json",
-  "name": "Starter Kit",
+  "name": "IonQ Quantum Cloud",
   "logo": {
     "dark": "/logo/dark.svg",
     "light": "/logo/light.svg"
   },
-  "openapi": ["/spec-v0.2.yml"],
   "favicon": "/favicon.svg",
   "colors": {
     "primary": "#0D9373",
@@ -16,59 +15,92 @@
       "to": "#07C983"
     }
   },
-  "topbarLinks": [
-    {
-      "name": "Support",
-      "url": "mailto:hi@mintlify.com"
-    }
-  ],
+  
+  "openapi": ["/spec-v0.2.yml"],
+
+  
+  "topbarLinks": [{
+    "name": "Support",
+    "url": "mailto:hi@mintlify.com"
+  }],
   "topbarCtaButton": {
-    "name": "Dashboard",
-    "url": "https://dashboard.mintlify.com"
+    "name": "Console",
+    "url": "https://cloud.ionq.com"
   },
-  "tabs": [
-    {
-      "name": "API Reference",
-      "url": "api"
-    }
-  ],
-  "anchors": [
-    {
-      "name": "Documentation",
+  
+  
+  
+  
+  "tabs": [{
+    "name": "Guides",
+    "url": "guides"
+  }, {
+    "name": "API Reference",
+    "url": "api-reference"
+  }],
+  
+  
+  
+  
+  "anchors": [{
+      "name": "Resources",
       "icon": "book-open-cover",
-      "url": "https://mintlify.com/docs"
+      "url": "https://ionq.com/resources"
     },
     {
-      "name": "Community",
-      "icon": "slack",
-      "url": "https://mintlify.com/community"
+      "name": "Get Help",
+      "icon": "paper-plane",
+      "url": "mailto:support@ionq.com"
     },
     {
-      "name": "Blog",
-      "icon": "newspaper",
-      "url": "https://mintlify.com/blog"
+      "name": "Sample Code",
+      "icon": "github",
+      "url": "https://github.com/ionq-samples/"
     }
   ],
-  "navigation": [
-    {
+  
+  
+  
+  
+  "navigation": [{
       "group": "Get Started",
       "pages": [
         "introduction",
-        "quickstart",
-        "development"
+        "run-your-first-job",
+        "available-sdks"
       ]
     },
     {
-      "group": "Essentials",
+      "group": "Using the Console",
       "pages": [
-        "essentials/markdown",
-        "essentials/code",
-        "essentials/images",
-        "essentials/settings",
-        "essentials/navigation",
-        "essentials/reusable-snippets"
+        "console/introduction",
+        "console/your-account",
+        "console/jobs",
+        "console/projects",
+        "console/organizations"
       ]
     },
+    
+    
+    
+    
+    
+    {
+      "group": "Guides",
+      "pages": [
+        "guides/all",
+        "guides/intro-to-jupyter",
+        "guides/writing-hybrid-loops",
+        "guides/understanding-noise-models",
+        "guides/intro-to-spam"
+      ]
+    },
+    
+    
+    
+    
+    
+    
     {
       "group": "Get Started",
       "pages": [
@@ -105,7 +137,7 @@
     }
   ],
 
-  
+
   "footerSocials": {
     "twitter": "https://twitter.com/mintlify",
     "github": "https://github.com/mintlify",
