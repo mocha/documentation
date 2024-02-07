@@ -72,35 +72,35 @@
     {
       "group": "Get Started",
       "pages": [
-        "api/introduction",
-        "api/quickstart"
+        "api-reference/introduction",
+        "api-reference/quickstart"
       ]
     },
     {
       "group": "jobs",
       "pages": [
-        "api/jobs/get-jobs",
-        "api/jobs/create-a-job",
-        "api/jobs/delete-many-jobs",
-        "api/jobs/get-a-specific-job",
-        "api/jobs/delete-a-job",
-        "api/jobs/get-a-specific-jobs-output",
-        "api/jobs/cancel-a-job",
-        "api/jobs/cancel-many-jobs"
+        "api-reference/jobs/get-jobs",
+        "api-reference/jobs/create-a-job",
+        "api-reference/jobs/delete-many-jobs",
+        "api-reference/jobs/get-a-specific-job",
+        "api-reference/jobs/delete-a-job",
+        "api-reference/jobs/get-a-specific-jobs-output",
+        "api-reference/jobs/cancel-a-job",
+        "api-reference/jobs/cancel-many-jobs"
       ]
     },
     {
       "group": "characterizations",
       "pages": [
-        "api/characterizations/get-all-backend-characterizations",
-        "api/characterizations/get-the-most-recent-backend-characterization",
-        "api/characterizations/get-a-characterization"
+        "api-reference/characterizations/get-all-backend-characterizations",
+        "api-reference/characterizations/get-the-most-recent-backend-characterization",
+        "api-reference/characterizations/get-a-characterization"
       ]
     },
     {
       "group": "backends",
       "pages": [
-        "api/backends/get-backends"
+        "api-reference/backends/get-backends"
       ]
     }
   ],
