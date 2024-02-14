@@ -53,7 +53,7 @@
       "url": "mailto:support@ionq.com"
     },
     {
-      "name": "Sample Code",
+      "name": "Sample Notebooks",
       "icon": "github",
       "url": "https://github.com/ionq-samples/"
     }
@@ -66,7 +66,7 @@
       "group": "Get Started",
       "pages": [
         "introduction",
-        "run-your-first-job",
+        "guides/run-your-first-job-with-qiskit",
         "available-sdks"
       ]
     },
